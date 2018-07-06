@@ -1,52 +1,39 @@
 
 include Wininet.ew
-include std/net/url.e
 include std/pretty.e
 
-procedure print_r( object value, sequence name = "", sequence options = {2} )
+constant UNITS = {"bytes","KiB","MiB"}
+
+function format_size( atom size )
 	
-	if length( name ) then
-		printf( 1, "%s = ", {name} )
-	end if
+	integer index = 1
 	
-	pretty_print( 1, value, options )
-	puts( 1, "\n" )
+	while size > 1024 do
+		size /= 1024
+		index += 1
+	end while
+	
+	return sprintf( "%0.2f %s", {size,UNITS[index]} )
+end function
+
+procedure download_file( sequence url )
+	
+	sequence data = HttpGetRequest( url )
+	sequence size = format_size( length(data) )
+	
+	printf( 1, "%10s %s\n", {size,url} )
 	
 end procedure
 
-public function HttpGetRequest( sequence url )
-	
-	atom flags = INTERNET_FLAG_NO_UI
-	atom port = INTERNET_DEFAULT_HTTP_PORT
-	
-	sequence parsed = url:parse( url )
-	
-	if equal( parsed[1], "https" ) then
-		flags += INTERNET_FLAG_SECURE
-		port = INTERNET_DEFAULT_HTTPS_PORT
-	end if
-	
-	atom ih = InternetOpen( "Mozilla/4.0 (compatible)", INTERNET_OPEN_TYPE_PRECONFIG )
-	atom ch = InternetConnect( ih, parsed[2], port )
-	atom req = HttpOpenRequest( ch, "GET", parsed[4], , , , flags )
-	
-	object data = {}
-	
-	if HttpSendRequest( req ) then
-		data = InternetReadFile( req )
-	end if
-	
-	InternetCloseHandle( req )
-	InternetCloseHandle( ch )
-	InternetCloseHandle( ih )
-	
-	return data
-end function
-
 procedure main()
 	
-	object data = HttpGetRequest( "https://myhtf.net/server-ip.txt" )
-	print_r( data, "data" )
+	download_file( "https://openeuphoria.org/index.wc" )
+	download_file( "https://openeuphoria.org/forum/" )
+	download_file( "https://sourceforge.net/projects/rapideuphoria/files/Euphoria/4.0.5/euphoria-4.0.5.pdf" )
+	download_file( "https://sourceforge.net/projects/rapideuphoria/files/Euphoria/4.0.5/euphoria-4.0.5-html.zip" )
+	download_file( "https://sourceforge.net/projects/rapideuphoria/files/Euphoria/4.0.5/euphoria_4.0.5_i386.deb" )
+	download_file( "https://sourceforge.net/projects/rapideuphoria/files/Euphoria/4.0.5/euphoria-4.0.5.exe" )
+	download_file( "https://sourceforge.net/projects/rapideuphoria/files/Euphoria/4.1.0-beta2/euphoria-4.1.0-x86.exe" )
 	
 end procedure
 
