@@ -3,6 +3,7 @@ include std/dll.e
 include std/machine.e
 include std/net/url.e
 include std/types.e
+include std/utils.e
 include euphoria/info.e
 
 public constant
@@ -227,25 +228,35 @@ public function InternetReadFile( atom hFile, atom dwNumberOfBytesToRead = 4096 
 	return peek({ lpBuffer, dwNumberOfBytesRead })
 end function
 
-public function HttpGetRequest( sequence url, object accept_types = NULL )
-	
-	atom flags = INTERNET_FLAG_NO_UI
-	atom port = INTERNET_DEFAULT_HTTP_PORT
+public function HttpGetRequest( sequence url, object accept_types = NULL, atom flags = INTERNET_FLAG_NO_UI )
 	
 	sequence parsed = url:parse( url )
 	
-	if equal( parsed[1], "https" ) then
+	object protocol = parsed[URL_PROTOCOL]
+	object hostname = parsed[URL_HOSTNAME]
+	object port     = parsed[URL_PORT]
+	object path     = parsed[URL_PATH]
+	object user     = parsed[URL_USER]
+	object password = parsed[URL_PASSWORD]
+	object query    = parsed[URL_QUERY_STRING]
+	
+	if equal( protocol, "https" ) and not and_bits( flags, INTERNET_FLAG_SECURE ) then
 		flags += INTERNET_FLAG_SECURE
-		port = INTERNET_DEFAULT_HTTPS_PORT
 	end if
 	
-	if not equal( parsed[3], 0 ) then
-		port = parsed[3]
+	if equal( port, 0 ) then
+		port = iff( equal(protocol, "https"),
+			INTERNET_DEFAULT_HTTPS_PORT,
+			INTERNET_DEFAULT_HTTP_PORT )
+	end if
+	
+	if not equal( query, 0 ) then
+		path = path & '?' & query
 	end if
 	
 	atom ih = InternetOpen( AGENT_STRING, INTERNET_OPEN_TYPE_PRECONFIG )
-	atom ch = InternetConnect( ih, parsed[2], port )
-	atom req = HttpOpenRequest( ch, "GET", parsed[4], , , accept_types, flags )
+	atom ch = InternetConnect( ih, hostname, port, user, password )
+	atom req = HttpOpenRequest( ch, "GET", path, , , accept_types, flags )
 	
 	sequence buff = {}
 	
